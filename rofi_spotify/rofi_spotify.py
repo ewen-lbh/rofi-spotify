@@ -41,10 +41,11 @@ def load_config():
         config['spotify'] = {}
         config['spotify']['spotify_username'] = str(input("Please enter your Spotify username. "))
 
-        config['settings'] = {}
-        config['settings']['show_playback_popups'] = 'false'
-        config['settings']['show_add_to_playlist_popups'] = 'true'
-        config['settings']['track_search_max_entries'] = '5'
+        config['settings'] = {
+            'show_playback_popups': 'false',
+            'show_add_to_playlist_popups': 'true',
+            'track_search_max_entries': '5',
+        }
 
         if not os.path.exists(config_dir):
             os.mkdir(config_dir)
@@ -68,18 +69,17 @@ def getPlaylists(sp, onlyEditable, username):
 
 
 def getCurrentTrackID(sp):
-    current_playback = sp.current_playback()
-    if not current_playback:
-        raise Exception()
-    else:
+    if current_playback := sp.current_playback():
         return current_playback['item']['uri'].split(":")[2]
+    else:
+        raise Exception()
 
 
 def getCurrentTrack(sp):
     try:
         track_id = getCurrentTrackID(sp)
         track_artists, track_name = getArtistsTitleForID(sp, track_id)
-        track_meta = track_artists + "-" + track_name
+        track_meta = f'{track_artists}-{track_name}'
     except Exception:
         track_id = None
         track_meta = "Nothing"
@@ -90,10 +90,7 @@ def getArtistsTitleForID(sp, track_id):
     meta_track = sp.track(track_id)
     artists = ""
     for index, artist in enumerate(meta_track['artists']):
-        if index == 0:
-            artists = artist['name']
-        else:
-            artists = artists + ', ' + artist['name']
+        artists = artist['name'] if index == 0 else f'{artists}, {artist["name"]}'
     return artists, meta_track['name']
 
 
@@ -109,8 +106,12 @@ def addTrackToPlaylist(rofi, rofi_args, sp, username, playlist_id, playlist_name
         playlist_tracks['items'].extend(playlist_tracks_tmp['items'])
     playlist_ids = [d['track']['id'] for d in playlist_tracks['items']]
     if track_id in playlist_ids:
-        index, key = rofi.select(track_name + " is already in " + playlist_name +
-                                 ". Add anyway? ", ["No", "Yes"], rofi_args=rofi_args)
+        index, key = rofi.select(
+            (f'{track_name} is already in {playlist_name}' + ". Add anyway? "),
+            ["No", "Yes"],
+            rofi_args=rofi_args,
+        )
+
         if index == -1:
             sys.exit(0)
         if index == 0:
